@@ -1,0 +1,1 @@
+{"version":3,"file":"timesheet.d.ts","sourceRoot":"","sources":["../../src/resolvers/timesheet.ts"],"names":[],"mappings":"AACA,OAAO,EAAgB,aAAa,EAA4B,MAAM,UAAU,CAAC;AAEjF,wBAAsB,gBAAgB,CAAC,EACrC,OAAO,GACR,EAAE;IACD,OAAO,EAAE;QACP,WAAW,CAAC,EAAE,MAAM,EAAE,CAAC;QACvB,SAAS,EAAE,MAAM,CAAC;QAClB,OAAO,EAAE,MAAM,CAAC;KACjB,CAAC;CACH,0BA0GA"}

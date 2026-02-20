@@ -1,0 +1,53 @@
+modules:
+  jira:projectPage:
+    - key: time-tracking-project-page
+      title: Simple Time Report
+      description: Hierarchical time tracking rollup report
+      resource: projectPageResource
+      resolver:
+        function: resolver
+      icon: https://developer.atlassian.com/platform/forge/images/icons/time-tracking.svg
+
+  jira:globalPage:
+    - key: time-tracking-global-page
+      title: Simple Time Report
+      description: Cross-project timesheet view
+      resource: globalPageResource
+      resolver:
+        function: resolver
+      icon: https://developer.atlassian.com/platform/forge/images/icons/time-tracking.svg
+
+  jira:issuePanel:
+    - key: time-tracking-issue-panel
+      title: Time Tracking
+      description: Worklog summary and quick log-time form
+      resource: issuePanelResource
+      resolver:
+        function: resolver
+      icon: https://developer.atlassian.com/platform/forge/images/icons/time-tracking.svg
+
+  function:
+    - key: resolver
+      handler: index.handler
+
+resources:
+  - key: projectPageResource
+    path: static/frontend/dist
+
+  - key: globalPageResource
+    path: static/frontend/dist
+
+  - key: issuePanelResource
+    path: static/frontend/dist
+
+permissions:
+  scopes:
+    - read:jira-work
+    - read:jira-user
+    - write:jira-work
+    - storage:app
+
+app:
+  runtime:
+    name: nodejs22.x
+  id: ari:cloud:ecosystem::app/f9082a49-26b6-46fe-9706-46e7c8c53753
