@@ -13,7 +13,7 @@
     "tunnel": "npm run build && forge tunnel"
   },
   "dependencies": {
-    "@forge/api": "^4.0.0",
+    "@forge/api": "^7.0.2",
     "@forge/resolver": "^1.6.0",
     "@forge/kvs": "^1.0.0"
   },
