@@ -2,8 +2,8 @@ export declare const handler: (payload: {
     call: {
         functionKey: string;
         payload?: unknown;
-        jobId?: string;
+        jobId?: string | undefined;
     };
     context: import("@forge/resolver/out/shared").Context;
-}, backendRuntimePayload?: Record<string, any>) => Promise<unknown>;
+}, backendRuntimePayload?: Record<string, any> | undefined) => Promise<unknown>;
 //# sourceMappingURL=index.d.ts.map
