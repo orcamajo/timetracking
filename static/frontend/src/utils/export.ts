@@ -309,3 +309,101 @@ export function exportTimecardView(
 
   downloadCsv(`${label}-timecard-${startDate}-to-${endDate}.csv`, csv);
 }
+
+/**
+ * Export the monthly report to CSV.
+ * Issues as rows (depth-first, indented by depth), users as columns.
+ */
+export function exportMonthlyReport(
+  nodes: HierarchyTimesheetNode[],
+  users: JiraUser[],
+  month: string,
+  label: string
+): void {
+  // Build per-user rollup map: issueKey → accountId → rollupSeconds
+  const userRollupMap = new Map<string, Record<string, number>>();
+
+  function walkBuild(node: HierarchyTimesheetNode): Record<string, number> {
+    const totals: Record<string, number> = {};
+    for (const author of node.authors) {
+      totals[author.accountId] =
+        (totals[author.accountId] ?? 0) + author.totalSeconds;
+    }
+    for (const child of node.children) {
+      const childTotals = walkBuild(child);
+      for (const [accountId, secs] of Object.entries(childTotals)) {
+        totals[accountId] = (totals[accountId] ?? 0) + secs;
+      }
+    }
+    userRollupMap.set(node.issueKey, totals);
+    return totals;
+  }
+
+  for (const root of nodes) {
+    walkBuild(root);
+  }
+
+  const headers = [
+    "Depth",
+    "Project",
+    "Issue Key",
+    "Summary",
+    "Type",
+    ...users.map((u) => u.displayName),
+    "Total",
+  ];
+
+  const rows: string[][] = [];
+
+  function buildRows(node: HierarchyTimesheetNode, depth: number) {
+    const userTotals = userRollupMap.get(node.issueKey) ?? {};
+    rows.push([
+      String(depth),
+      node.projectKey,
+      node.issueKey,
+      node.summary,
+      node.issueType,
+      ...users.map((u) => {
+        const secs = userTotals[u.accountId] ?? 0;
+        return secs > 0 ? formatTime(secs) : "";
+      }),
+      node.rollupTotalSeconds > 0 ? formatTime(node.rollupTotalSeconds) : "",
+    ]);
+    for (const child of node.children) {
+      buildRows(child, depth + 1);
+    }
+  }
+
+  for (const root of nodes) {
+    buildRows(root, 0);
+  }
+
+  // Totals row
+  const userGrandTotals: Record<string, number> = {};
+  for (const node of nodes) {
+    const nodeUserTotals = userRollupMap.get(node.issueKey) ?? {};
+    for (const [accountId, secs] of Object.entries(nodeUserTotals)) {
+      userGrandTotals[accountId] = (userGrandTotals[accountId] ?? 0) + secs;
+    }
+  }
+  const grandTotal = nodes.reduce((sum, n) => sum + n.rollupTotalSeconds, 0);
+  rows.push([
+    "",
+    "",
+    "TOTAL",
+    "",
+    "",
+    ...users.map((u) => {
+      const total = userGrandTotals[u.accountId] ?? 0;
+      return total > 0 ? formatTime(total) : "";
+    }),
+    grandTotal > 0 ? formatTime(grandTotal) : "",
+  ]);
+
+  const csv = [
+    headers.map(csvEscape).join(","),
+    ...rows.map((row) => row.map(csvEscape).join(",")),
+  ].join("\n");
+
+  downloadCsv(`${label}-monthly-${month}.csv`, csv);
+}

@@ -6,7 +6,7 @@ modules:
       resource: projectPageResource
       resolver:
         function: resolver
-      icon: https://developer.atlassian.com/platform/forge/images/icons/time-tracking.svg
+      icon: https://raw.githubusercontent.com/orcamajo/timetracking/main/static/icon-48.png
 
   jira:globalPage:
     - key: time-tracking-global-page
@@ -15,7 +15,7 @@ modules:
       resource: globalPageResource
       resolver:
         function: resolver
-      icon: https://developer.atlassian.com/platform/forge/images/icons/time-tracking.svg
+      icon: https://raw.githubusercontent.com/orcamajo/timetracking/main/static/icon-48.png
 
   jira:issuePanel:
     - key: time-tracking-issue-panel
@@ -24,7 +24,7 @@ modules:
       resource: issuePanelResource
       resolver:
         function: resolver
-      icon: https://developer.atlassian.com/platform/forge/images/icons/time-tracking.svg
+      icon: https://raw.githubusercontent.com/orcamajo/timetracking/main/static/icon-48.png
 
   function:
     - key: resolver

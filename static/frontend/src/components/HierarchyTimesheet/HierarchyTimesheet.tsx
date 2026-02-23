@@ -9,8 +9,13 @@ import {
   HierarchyTimesheetTimecard,
   aggregateUserRows,
 } from "./HierarchyTimesheetTimecard";
+import { MonthlyReport } from "./MonthlyReport";
 import { filterNodesByUsers } from "../../utils/hierarchy-filter";
-import { exportHierarchyTimesheet, exportTimecardView } from "../../utils/export";
+import {
+  exportHierarchyTimesheet,
+  exportTimecardView,
+  exportMonthlyReport,
+} from "../../utils/export";
 import {
   toISODate,
   getWeekRange,
@@ -18,10 +23,14 @@ import {
   formatDayShort,
   isWeekend,
   isToday,
+  toMonthString,
+  getMonthDates,
+  shiftMonth,
+  formatMonthDisplay,
 } from "../../utils/date-utils";
 import { formatTime } from "../../utils/time-format";
 
-type ViewMode = "hierarchy" | "timecard";
+type ViewMode = "hierarchy" | "timecard" | "monthly";
 
 interface HierarchyTimesheetProps {
   mode: "project" | "global";
@@ -41,6 +50,9 @@ export function HierarchyTimesheet({
   const [startDate, setStartDate] = useState(defaultRange.start);
   const [endDate, setEndDate] = useState(defaultRange.end);
   const [viewMode, setViewMode] = useState<ViewMode>("hierarchy");
+  const [selectedMonth, setSelectedMonth] = useState<string>(() =>
+    toMonthString(new Date())
+  );
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(
     new Set()
   );
@@ -51,10 +63,15 @@ export function HierarchyTimesheet({
     Array<{ key: string; name: string }>
   >([]);
 
+  // Effective date range for the hook — month range when in monthly mode
+  const effectiveStartDate =
+    viewMode === "monthly" ? getMonthDates(selectedMonth).startDate : startDate;
+  const effectiveEndDate =
+    viewMode === "monthly" ? getMonthDates(selectedMonth).endDate : endDate;
+
   const days = getDaysInRange(startDate, endDate);
 
   const handleDateChange = (newStart: string, newEnd: string) => {
-    // Ensure start <= end
     if (newStart > newEnd) {
       setStartDate(newStart);
       setEndDate(newStart);
@@ -68,6 +85,10 @@ export function HierarchyTimesheet({
     const range = defaultWeekRange();
     setStartDate(range.start);
     setEndDate(range.end);
+  };
+
+  const handleThisMonth = () => {
+    setSelectedMonth(toMonthString(new Date()));
   };
 
   // Fetch available projects on mount (global mode only)
@@ -88,7 +109,6 @@ export function HierarchyTimesheet({
     [availableProjects]
   );
 
-  // Determine project keys to pass to the hook
   const projectKeysArg = useMemo(() => {
     if (mode === "project" && projectKey) return [projectKey];
     return Array.from(selectedProjects);
@@ -96,8 +116,8 @@ export function HierarchyTimesheet({
 
   const { data, loading, error, refresh } = useHierarchyTimesheet(
     projectKeysArg,
-    startDate,
-    endDate
+    effectiveStartDate,
+    effectiveEndDate
   );
 
   // Auto-expand top-level nodes when data changes
@@ -138,6 +158,13 @@ export function HierarchyTimesheet({
     [epicFilteredNodes, selectedUsers]
   );
 
+  // Users to show as columns in monthly view
+  const columnUsers = useMemo(() => {
+    if (!data) return [];
+    if (selectedUsers.size === 0) return data.users;
+    return data.users.filter((u) => selectedUsers.has(u.accountId));
+  }, [data, selectedUsers]);
+
   // Compute totals row (hierarchy view)
   const dailyTotals: Record<string, number> = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -166,7 +193,6 @@ export function HierarchyTimesheet({
     });
   };
 
-  // Export label
   const exportLabel = useMemo(() => {
     if (mode === "project" && projectKey) return projectKey;
     if (selectedProjects.size === 0) return "all-projects";
@@ -175,7 +201,9 @@ export function HierarchyTimesheet({
   }, [mode, projectKey, selectedProjects]);
 
   const handleExport = () => {
-    if (viewMode === "timecard") {
+    if (viewMode === "monthly") {
+      exportMonthlyReport(filteredNodes, columnUsers, selectedMonth, exportLabel);
+    } else if (viewMode === "timecard") {
       const userRows = aggregateUserRows(filteredNodes);
       exportTimecardView(userRows, days, exportLabel, startDate, endDate);
     } else {
@@ -208,6 +236,12 @@ export function HierarchyTimesheet({
             >
               Timecard
             </button>
+            <button
+              className={viewMode === "monthly" ? "active" : ""}
+              onClick={() => setViewMode("monthly")}
+            >
+              Monthly
+            </button>
           </div>
           {mode === "global" && (
             <MultiSelect
@@ -237,12 +271,27 @@ export function HierarchyTimesheet({
       </div>
 
       <div className="timesheet-nav">
-        <DateRangePicker
-          startDate={startDate}
-          endDate={endDate}
-          onChange={handleDateChange}
-        />
-        <button onClick={handleThisWeek}>This Week</button>
+        {viewMode === "monthly" ? (
+          <>
+            <button onClick={() => setSelectedMonth(shiftMonth(selectedMonth, -1))}>
+              ◀
+            </button>
+            <span className="date-range">{formatMonthDisplay(selectedMonth)}</span>
+            <button onClick={() => setSelectedMonth(shiftMonth(selectedMonth, 1))}>
+              ▶
+            </button>
+            <button onClick={handleThisMonth}>This Month</button>
+          </>
+        ) : (
+          <>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={handleDateChange}
+            />
+            <button onClick={handleThisWeek}>This Week</button>
+          </>
+        )}
         <button className="btn btn-subtle" onClick={refresh}>
           Refresh
         </button>
@@ -258,7 +307,14 @@ export function HierarchyTimesheet({
 
       {data && !loading && (
         <div className="table-scroll-wrapper">
-          {viewMode === "timecard" ? (
+          {viewMode === "monthly" ? (
+            <MonthlyReport
+              nodes={filteredNodes}
+              users={columnUsers}
+              expandedKeys={expandedKeys}
+              onToggle={toggleExpand}
+            />
+          ) : viewMode === "timecard" ? (
             <HierarchyTimesheetTimecard nodes={filteredNodes} days={days} />
           ) : (
             <table className="timesheet-grid">

@@ -107,3 +107,46 @@ export function isWeekend(isoDate: string): boolean {
   const day = new Date(isoDate + "T00:00:00").getDay();
   return day === 0 || day === 6;
 }
+
+/**
+ * Get the current month as a YYYY-MM string.
+ */
+export function toMonthString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Compute start and end ISO dates for a month string ("YYYY-MM").
+ */
+export function getMonthDates(month: string): {
+  startDate: string;
+  endDate: string;
+} {
+  const [year, monthStr] = month.split("-");
+  const y = parseInt(year);
+  const m = parseInt(monthStr);
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0); // last day of month
+  return { startDate: toISODate(start), endDate: toISODate(end) };
+}
+
+/**
+ * Shift a month string (YYYY-MM) by delta months.
+ */
+export function shiftMonth(month: string, delta: number): string {
+  const [year, monthStr] = month.split("-");
+  const date = new Date(parseInt(year), parseInt(monthStr) - 1 + delta, 1);
+  return toMonthString(date);
+}
+
+/**
+ * Format a month string for display: "February 2026".
+ */
+export function formatMonthDisplay(month: string): string {
+  const [year, monthStr] = month.split("-");
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  return `${months[parseInt(monthStr) - 1]} ${year}`;
+}
